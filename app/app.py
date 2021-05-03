@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS, cross_origin
 import os
+from os.path import join, dirname, realpath
 from pymongo import MongoClient
 from bson.json_util import dumps
 from werkzeug.utils import secure_filename
@@ -9,7 +10,8 @@ import datetime
 ALLOWED_EXTENSIONS_FOR_IMAGES = {'jfif', 'png', 'jpg', 'jpeg', 'gif'}
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = '/uploads/'
+app.config['UPLOAD_FOLDER'] = join(
+    dirname(realpath(__file__)), 'uploads/')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # max 16mb
 CORS(app)
 
@@ -38,9 +40,10 @@ def uploadProduct():
 
     img1 = request.files['img1']
     img2 = request.files['img2']
-    name = request.json['name']
-    price = request.json['price']
-    active = request.json['active']
+    name = request.form['name']
+    price = request.form['price']
+    active = 1
+    date = datetime.datetime.utcnow()
 
     if img1 and img2 and allowed_file(img1.filename) and allowed_file(img2.filename):
 
@@ -50,8 +53,8 @@ def uploadProduct():
         img1.save(os.path.join(app.config['UPLOAD_FOLDER'], img1name))
         img2.save(os.path.join(app.config['UPLOAD_FOLDER'], img2name))
 
-        img1Path = app.config['UPLOAD_FOLDER'] + img1name
-        img2Path = app.config['UPLOAD_FOLDER'] + img2name
+        img1Path = 'uploads/' + img1name
+        img2Path = 'uploads/' + img2name
 
         _id = db.products.insert_one({
             'img1': img1Path,
@@ -59,17 +62,19 @@ def uploadProduct():
             'name': name,
             'price': price,
             'active': active,
+            'date': date
         })
 
         return jsonify({"message": "Product uploaded successfully", "result": True}), 200
 
 
+""" def post_image(img_file):
+    img = open(img_file, 'rb').read()
+    response = requests.post(URL, data=img, headers=headers)
+    return response """
+
 """     img1.save(secure_filename(img1.filename))
     img2.save(secure_filename(img2.filename)) """
-
-
-
-        
 
 
 """ @app.route('/posts')
