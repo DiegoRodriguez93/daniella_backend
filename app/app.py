@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS, cross_origin
 import os
 from os.path import join, dirname, realpath
@@ -6,6 +6,7 @@ from pymongo import MongoClient
 from bson.json_util import dumps
 from werkzeug.utils import secure_filename
 import datetime
+import uuid
 
 ALLOWED_EXTENSIONS_FOR_IMAGES = {'jfif', 'png', 'jpg', 'jpeg', 'gif'}
 
@@ -26,7 +27,7 @@ def home():
 
 @app.route('/home-products')
 def homeProducts():
-    products = db.products.find()
+    products = db.productos.find({}, {'_id': False}).limit(4)
     return dumps(products)
 
 
@@ -53,10 +54,11 @@ def uploadProduct():
         img1.save(os.path.join(app.config['UPLOAD_FOLDER'], img1name))
         img2.save(os.path.join(app.config['UPLOAD_FOLDER'], img2name))
 
-        img1Path = 'uploads/' + img1name
-        img2Path = 'uploads/' + img2name
+        img1Path = '/uploads/' + img1name
+        img2Path = '/uploads/' + img2name
 
-        _id = db.products.insert_one({
+        _id = db.productos.insert_one({
+            'id': str(uuid.uuid4()),
             'img1': img1Path,
             'img2': img2Path,
             'name': name,
@@ -68,26 +70,14 @@ def uploadProduct():
         return jsonify({"message": "Product uploaded successfully", "result": True}), 200
 
 
-""" def post_image(img_file):
-    img = open(img_file, 'rb').read()
-    response = requests.post(URL, data=img, headers=headers)
-    return response """
+@app.route('/uploads/<image>')
+def returnImage(image):
+    try:
+        return send_file(os.path.join(app.config['UPLOAD_FOLDER'])+image, attachment_filename=image)
+    except Exception as e:
+        # TODO: ADD NOT FOUND IMAGE TO RESOLVE FAIL IMAGE REQUEST
+        return jsonify({"message": "Image not found", "result": False}), 404
 
-"""     img1.save(secure_filename(img1.filename))
-    img2.save(secure_filename(img2.filename)) """
-
-
-""" @app.route('/posts')
-def posts():
-    _items = db.posts.find({}, {'_id': False})
-    return dumps(_items)
-
-def insert():
-    post = {"author": "Diego",
-            "text": "My first blog post!",
-            "tags": ["mongodb", "python", "pymongo"],
-            "date": datetime.datetime.utcnow()}
-    db.posts.insert_one(post) """
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=True)
